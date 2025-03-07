@@ -38,7 +38,7 @@ const Share: React.FC<ShareProps> = () => {
       if (file) {
         formData.append("post", file);
         await axios.post(
-          process.env.REACT_APP_API_URL + "/api/v1/post/new",
+          process.env.API_URL + "/api/v1/post/new",
           formData,
           {
             headers: { "Content-Type": "multipart/form-data" },
@@ -51,7 +51,7 @@ const Share: React.FC<ShareProps> = () => {
       if (selectedFile) {
         formData.append("audio", selectedFile);
         await axios.post(
-          process.env.REACT_APP_API_URL + "/api/v1/audio/new",
+          process.env.API_URL + "/api/v1/audio/new",
           formData,
           {
             headers: { "Content-Type": "multipart/form-data" },
@@ -62,7 +62,7 @@ const Share: React.FC<ShareProps> = () => {
       }
 
       if (desc && !file && !selectedFile) {
-        await axios.post("http://138.197.149.231:3000/api/v1/post/new", formData, {
+        await axios.post(process.env.API_URL + "/post/new", formData, {
           withCredentials: true,
         });
       }

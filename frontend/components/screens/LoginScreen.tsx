@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ImageBackground,
+  Platform,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import axios from "axios";
@@ -17,38 +18,54 @@ import { AuthStackParamList } from "../navigator/AuthStack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import Cookies from "js-cookie";
+import { tokenStorage } from "../../app/authentication/authenticationCall";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
+  const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
+  
+  // Helper function to determine if input is email or phone
+  const isEmail = (input: string): boolean => {
+    // Basic email validation
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+  };
 
   const handleLogin = async () => {
     try {
+      console.log('API_URL ', API_URL);
+      
+      // Determine if input is email or phone and create appropriate payload
+      const payload = {
+        password,
+        ...(isEmail(emailOrPhone) 
+          ? { email: emailOrPhone } 
+          : { phone: emailOrPhone })
+      };
+      
       const response = await axios.post(
         `${API_URL}login`,
-        { email, password },
+        payload,
         { withCredentials: true }
       );
-  
+      
+      console.log('response ', response);
       if (response.data.success) {
-        const setCookieHeader = response.headers["set-cookie"];
-        if (setCookieHeader) {
-          const token = setCookieHeader[0]
-            .split(";")
-            .find((item) => item.trim().startsWith("token="))
-            ?.split("=")[1];
-  
+          const token = response.data.token;
           if (token) {
-            // Set the token in SecureStore
-            await SecureStore.setItemAsync("token", token);
-            login();
+            // Set the token using platform-specific storage
+            console.log('token ', token);
+            const stored = await tokenStorage.setToken("token", token);
+            if (stored) {
+              login();
+            } else {
+              alert("Failed to store authentication token");
+            }
           } else {
-            alert("No cookies found");
+            alert("No token found in response");
           }
-        }
       } else {
         alert("Login failed");
       }
@@ -74,8 +91,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  
-
   return (
     <ImageBackground
       source={{
@@ -96,9 +111,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
         <TextInput
           style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
+          placeholder="Email or Phone number"
+          value={emailOrPhone}
+          onChangeText={setEmailOrPhone}
           keyboardType="email-address"
           autoCapitalize="none"
         />

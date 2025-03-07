@@ -4,29 +4,44 @@ const User = require("../models/User");
 const sendToken = require("../utils/sendToken");
 
 exports.register = catchAsyncErrors(async (req, res, next) => {
-  // check if filled every field
-  if (!req.body.name || !req.body.password || !req.body.email) {
-    return next(new ErrorHandler("Please fill all the fields", 400));
+  // check if filled required fields
+  if (!req.body.name || !req.body.password || (!req.body.email && !req.body.phone)) {
+    return next(new ErrorHandler("Please fill all the required fields", 400));
   }
 
-  const user = await User.create({
-    email: req.body.email,
-    password: req.body.password,
+  // Create user with provided fields
+  const userData = {
     name: req.body.name,
-  });
+    password: req.body.password,
+  };
+
+  // Add email or phone if provided
+  if (req.body.email) userData.email = req.body.email;
+  if (req.body.phone) userData.phone = req.body.phone;
+
+  const user = await User.create(userData);
 
   sendToken(user, 201, res);
 });
 
 exports.login = catchAsyncErrors(async (req, res, next) => {
-  // check if filled every field
-  if (!req.body.email || !req.body.password) {
-    return res.status(400).json("Please fill all the fields");
+  // Check if password and either email or phone is provided
+  if ((!req.body.email && !req.body.phone) || !req.body.password) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide your email or phone number and password"
+    });
   }
 
-  const user = await User.findOne({ email: req.body.email }).select(
-    "+password"
-  );
+  let user;
+  
+  // Find user by email or phone
+  if (req.body.email) {
+    user = await User.findOne({ email: req.body.email }).select("+password");
+  } else if (req.body.phone) {
+    user = await User.findOne({ phone: req.body.phone }).select("+password");
+  }
+
   if (!user) {
     return next(new ErrorHandler("User not found", 404));
   }

@@ -16,17 +16,29 @@ import { AuthStackParamList } from "../navigator/AuthStack";
 type Props = NativeStackScreenProps<AuthStackParamList, "SignUp">;
 
 const SignUpScreen: React.FC<Props> = ({ navigation }) => {
-  const [email, setEmail] = useState("");
+  const [emailOrPhone, setEmailOrPhone] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  
+  // Helper function to determine if input is email or phone
+  const isEmail = (input: string): boolean => {
+    // Basic email validation
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+  };
 
   const handleSignUp = async () => {
     try {
-      const response = await axios.post(`${API_URL}register`, {
+      // Determine if input is email or phone and create appropriate payload
+      const payload = {
         name,
-        email,
         password,
-      });
+        ...(isEmail(emailOrPhone) 
+          ? { email: emailOrPhone } 
+          : { phone: emailOrPhone })
+      };
+      
+      console.log('Signup payload:', payload);
+      const response = await axios.post(`${API_URL}register`, payload);
   
       if (response.data.success) {
         navigation.navigate("Login");
@@ -69,14 +81,13 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
           placeholder="Name"
           value={name}
           onChangeText={setName}
-          keyboardType="email-address"
-          autoCapitalize="none"
+          autoCapitalize="words"
         />
         <TextInput
           style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
+          placeholder="Email or Phone number"
+          value={emailOrPhone}
+          onChangeText={setEmailOrPhone}
           keyboardType="email-address"
           autoCapitalize="none"
         />

@@ -1,6 +1,59 @@
 import axios from "axios";
 import { API_URL } from '@env';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+
+// Platform-specific token storage utilities
+export const tokenStorage = {
+  getToken: async (key: string): Promise<string | null> => {
+    try {
+      if (Platform.OS === 'web') {
+        // Use localStorage for web
+        return localStorage.getItem(key);
+      } else {
+        // Use SecureStore for native platforms
+        return await SecureStore.getItemAsync(key);
+      }
+    } catch (error) {
+      console.error('Error retrieving token:', error);
+      return null;
+    }
+  },
+  
+  setToken: async (key: string, value: string): Promise<boolean> => {
+    try {
+      if (Platform.OS === 'web') {
+        // Use localStorage for web
+        localStorage.setItem(key, value);
+        return true;
+      } else {
+        // Use SecureStore for native platforms
+        await SecureStore.setItemAsync(key, value);
+        return true;
+      }
+    } catch (error) {
+      console.error('Error storing token:', error);
+      return false;
+    }
+  },
+  
+  removeToken: async (key: string): Promise<boolean> => {
+    try {
+      if (Platform.OS === 'web') {
+        // Use localStorage for web
+        localStorage.removeItem(key);
+        return true;
+      } else {
+        // Use SecureStore for native platforms
+        await SecureStore.deleteItemAsync(key);
+        return true;
+      }
+    } catch (error) {
+      console.error('Error removing token:', error);
+      return false;
+    }
+  }
+};
 
 // Create an axios instance
 export const api = axios.create({
@@ -12,7 +65,7 @@ export const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await SecureStore.getItemAsync('token');
+      const token = await tokenStorage.getToken('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -36,7 +89,7 @@ api.interceptors.response.use(
       if (error.response.status === 401) {
         console.error("Unauthorized. Please check your token.");
         // Optionally clear the token and navigate to login
-        SecureStore.deleteItemAsync('token');
+        tokenStorage.removeToken('token');
       } else if (error.response.status === 500) {
         console.error("Server error. Please try again later.");
       }
